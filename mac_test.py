@@ -6,14 +6,15 @@ import matplotlib.pyplot as plt
 import torch
 import gc
 
-def clear_cpu_memory():
+def clear_mps_memory():
     gc.collect()
+    torch.mps.empty_cache()
 
-# Check if the CPU is used
-device = torch.device("cpu")
+# Check if MPS is available and use it if possible
+device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
-# Clear CPU memory before running the code
-clear_cpu_memory()
+# Clear MPS memory before running the code
+clear_mps_memory()
 
 # Initialize the tokenizer and model for BERT
 model_name = 'bert-base-uncased'
@@ -36,8 +37,8 @@ def predict_proba(texts):
     inputs = tokenizer(texts, return_tensors='pt', truncation=True, padding=True).to(device)
     with torch.no_grad():
         outputs = model(**inputs)
-        probabilities = torch.nn.functional.softmax(outputs.logits, dim=-1).numpy()
-    clear_cpu_memory()  # Clear CPU memory after predictions
+        probabilities = torch.nn.functional.softmax(outputs.logits, dim=-1).cpu().numpy()
+    clear_mps_memory()  # Clear MPS memory after predictions
     return probabilities
 
 # Adapt the input processing for text data
@@ -51,7 +52,7 @@ x = np.array([text_to_array(text) for text in texts])
 # Ensure predict_proba returns probabilities as expected
 y = predict_proba(texts)
 
-clear_cpu_memory()
+clear_mps_memory()
 
 # 1) Feature removal
 class MarginalExtension:
@@ -103,4 +104,4 @@ plt.ylabel("Importance")
 plt.title("Feature Importance using Shapley Values")
 plt.show()
 
-clear_cpu_memory()  # Final memory clearance
+clear_mps_memory()  # Final memory clearance
